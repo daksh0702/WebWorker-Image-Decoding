@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Image Canvas</title>
+    <style>
+        #input{
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+        #input + label{
+            display: inline-block;
+            background-color: #777777;
+            font-family: sans-serif;
+            padding: 5px;
+            font-size: 2em;
+        }
+        #input:focus + label{
+            outline: 5px solid teal;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <input type="file" accept="image/*" name="input" id="input">
+        <label for="input">Choose file</label>
+        <br/>
+        <br/>
+    </div>
+
+    <canvas id="preview"></canvas>
+    <script type="text/javascript">
+        const $input = document.getElementById('input')
+        const $preview = document.getElementById('preview')
+        const previewCtx = $preview.getContext('2d')
+        // const image = new Image()
+        
+        const worker = new Worker('worker.js')
+        worker.addEventListener('message',(d) => {
+            const imageData = d.data
+            previewCtx.putImageData(imageData,0,0);
+        })  
+
+        function applyFilter(){
+            const imageData = previewCtx.getImageData(0,0,$preview.height,$preview.width) 
+            worker.postMessage(imageData, [imageData.data.buffer])  // api syntax second argument we can directly give access to worker of imageData that being typedarray and main thread will lose its access
+            
+            // previewCtx.putImageData(imageData,0,0);
+        }
+
+        // image.addEventListener('load',(e)=>{
+        //     $preview.width = image.width
+        //     $preview.height = image.height
+        //     previewCtx.drawImage(image,0,0) // image x,y
+        //     applyFilter()
+        // })
+        
+        $input.addEventListener('change',(e)=>{
+            const file = e.target.files[0]
+            createImageBitmap(file)  // api to read image data and do processing without having to block main thread via file Reader
+            .then(bitmap => {
+                $preview.width = bitmap.width
+                $preview.height = bitmap.height
+                previewCtx.drawImage(bitmap,0,0) // image x,y
+                applyFilter()
+            })
+        })
+
+    </script>
+</body>
+</html>
